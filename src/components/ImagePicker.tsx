@@ -68,19 +68,31 @@ export default function ImagePicker({ value, onChange, label = "Imagen", classNa
   const uploadFile = async (file: File) => {
     setUploading(true);
     setUploadError("");
-    const form = new FormData();
-    form.append("image", file);
     try {
-      const r = await fetch(`${BACKEND}/api/upload`, { method: "POST", body: form });
-      const json = await r.json();
-      if (r.ok && json.url) {
-        onChange(json.url);
+      let url = "";
+      try {
+        // Try client-side upload (Vercel Blob)
+        const { upload } = await import("@vercel/blob/client");
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/upload-client",
+        });
+        url = blob.url;
+      } catch {
+        // Fallback: server-side upload (local dev)
+        const form = new FormData();
+        form.append("image", file);
+        const r = await fetch(`${BACKEND}/api/upload`, { method: "POST", body: form });
+        const json = await r.json();
+        if (r.ok && json.url) url = json.url;
+        else { setUploadError(json.error ?? "Error al subir"); setUploading(false); return; }
+      }
+      if (url) {
+        onChange(url);
         setOpen(false);
-      } else {
-        setUploadError(json.error ?? "Error al subir");
       }
     } catch {
-      setUploadError("No se pudo conectar al servidor. Asegúrate de que el backend está corriendo.");
+      setUploadError("No se pudo conectar al servidor.");
     }
     setUploading(false);
   };

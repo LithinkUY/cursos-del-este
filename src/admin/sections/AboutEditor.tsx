@@ -32,15 +32,28 @@ export default function AboutEditor() {
     if (!file) return;
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append("video", file);
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: form,
-      });
-      const data = await res.json();
-      if (data.url) {
-        update({ bgVideo: data.url });
+      // Try client-side upload (Vercel Blob) first, fallback to server upload
+      let url = "";
+      try {
+        const { upload } = await import("@vercel/blob/client");
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/upload-client",
+        });
+        url = blob.url;
+      } catch {
+        // Fallback: server-side upload (local dev)
+        const form = new FormData();
+        form.append("video", file);
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: form,
+        });
+        const json = await res.json();
+        url = json.url || "";
+      }
+      if (url) {
+        update({ bgVideo: url });
       }
     } catch (err) {
       console.error("Error uploading video:", err);

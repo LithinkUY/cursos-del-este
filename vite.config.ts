@@ -22,6 +22,12 @@ export default defineConfig(({mode}) => {
         // Ignorar data.json y uploads para evitar reload infinito cuando el backend los escribe
         ignored: ['**/data.json', '**/uploads/**', '**/server.ts'],
       },
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+      },
     },
   };
 });
