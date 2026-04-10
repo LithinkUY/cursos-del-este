@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { neon } from "@neondatabase/serverless";
-import bcrypt from "bcryptjs";
+import bcryptjs from "bcryptjs";
+const bcrypt = bcryptjs;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -12,7 +13,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const sql = neon(process.env.DATABASE_URL!);
+  if (!process.env.DATABASE_URL) {
+    return res.status(500).json({ error: "DATABASE_URL not configured" });
+  }
+
+  const sql = neon(process.env.DATABASE_URL);
   const { username, currentPassword, newPassword } = req.body ?? {};
 
   if (!username || !currentPassword || !newPassword) {

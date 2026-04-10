@@ -8,7 +8,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const sql = neon(process.env.DATABASE_URL!);
+  if (!process.env.DATABASE_URL) {
+    return res.status(500).json({ error: "DATABASE_URL not configured" });
+  }
+
+  const sql = neon(process.env.DATABASE_URL);
 
   try {
     if (req.method === "GET") {
