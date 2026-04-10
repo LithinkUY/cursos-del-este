@@ -10,9 +10,16 @@ export interface SectionButton {
   style: "primary" | "outline" | "white";
 }
 
+export interface AccordionItem {
+  id: string;
+  icon: string; // lucide icon name or emoji
+  title: string;
+  htmlCode: string;
+}
+
 export interface HomeSection {
   id: string;
-  type: "image" | "video" | "html";
+  type: "image" | "video" | "html" | "accordion";
   title: string;
   subtitle: string;
   image: string;
@@ -26,6 +33,8 @@ export interface HomeSection {
   videoUrl: string; // YouTube/Vimeo URL
   // html widget
   htmlCode: string;
+  // accordion
+  accordionItems: AccordionItem[];
   // buttons
   buttons: SectionButton[];
   link: string;
@@ -131,9 +140,23 @@ export interface HtmlWidget {
   position: "after-header" | "before-footer" | "in-home";
 }
 
+export interface AboutSection {
+  badge: string;
+  title: string;
+  description: string;
+  bulletPoints: string[];
+  bgType: "none" | "video" | "image";
+  bgVideo: string;
+  bgImage: string;
+  overlayOpacity: number;
+  images: string[];
+  visible: boolean;
+}
+
 export interface SiteData {
   header: SiteHeader;
   courseCategories: string[];
+  coursesGridCols: 2 | 3 | 4;
   footer: SiteFooter;
   colors: SiteColors;
   menuItems: MenuItem[];
@@ -142,6 +165,7 @@ export interface SiteData {
   instagram: InstagramConfig;
   whatsapp: WhatsAppConfig;
   htmlWidgets: HtmlWidget[];
+  about: AboutSection;
   adminUser: { username: string; password: string };
 }
 
@@ -149,6 +173,7 @@ export interface SiteData {
 
 const DEFAULT_DATA: SiteData = {
   adminUser: { username: "admin", password: "admin123" },
+  coursesGridCols: 3,
   header: {
     logoUrl: "",
     logoWidth: 160,
@@ -216,6 +241,7 @@ const DEFAULT_DATA: SiteData = {
       showTitle: true,
       videoUrl: "",
       htmlCode: "",
+      accordionItems: [],
       buttons: [{ id: "1", label: "VER CURSO", link: "#cursos", style: "primary" }],
       link: "#cursos",
       order: 1,
@@ -234,6 +260,7 @@ const DEFAULT_DATA: SiteData = {
       showTitle: true,
       videoUrl: "",
       htmlCode: "",
+      accordionItems: [],
       buttons: [{ id: "1", label: "VER CURSO", link: "#cursos", style: "primary" }],
       link: "#cursos",
       order: 2,
@@ -252,6 +279,7 @@ const DEFAULT_DATA: SiteData = {
       showTitle: true,
       videoUrl: "",
       htmlCode: "",
+      accordionItems: [],
       buttons: [{ id: "1", label: "VER CURSO", link: "#cursos", style: "primary" }],
       link: "#cursos",
       order: 3,
@@ -320,6 +348,26 @@ const DEFAULT_DATA: SiteData = {
     position: "bottom-right",
   },
   htmlWidgets: [],
+  about: {
+    badge: "Sobre Nosotros",
+    title: "Líderes en capacitación técnica en la región",
+    description: "Nro 1 en cursos de alta demanda laboral, capacitate para el futuro. UNETE HOY",
+    bulletPoints: [
+      "Metodología 100% práctica y con salida laboral",
+      "Instructores con experiencia real en la industria",
+      "Horarios flexibles — mañana, tarde y noche",
+      "Comunidad de egresados que triunfan en sus campos",
+    ],
+    bgType: "none",
+    bgVideo: "",
+    bgImage: "",
+    overlayOpacity: 40,
+    images: [
+      "https://picsum.photos/seed/learn1/400/500",
+      "https://picsum.photos/seed/learn2/400/500",
+    ],
+    visible: true,
+  },
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -337,9 +385,11 @@ interface SiteContextType {
   addCourse: (course: Course) => void;
   removeCourse: (id: string) => void;
   updateCourseCategories: (categories: string[]) => void;
+  updateCoursesGridCols: (cols: 2 | 3 | 4) => void;
   updateInstagram: (config: InstagramConfig) => void;
   updateWhatsApp: (config: WhatsAppConfig) => void;
   updateHtmlWidgets: (widgets: HtmlWidget[]) => void;
+  updateAbout: (about: AboutSection) => void;
   updateAdminCredentials: (username: string, password: string) => void;
   isAdminLoggedIn: boolean;
   loginAdmin: (username: string, password: string) => boolean;
@@ -370,10 +420,12 @@ export function SiteProvider({ children }: { children: ReactNode }) {
           whatsapp: { ...DEFAULT_DATA.whatsapp, ...parsed.whatsapp },
           instagram: { ...DEFAULT_DATA.instagram, ...parsed.instagram },
           htmlWidgets: parsed.htmlWidgets ?? [],
+          about: { ...DEFAULT_DATA.about, ...parsed.about },
           courseCategories: parsed.courseCategories ?? DEFAULT_DATA.courseCategories,
           homeSections: (parsed.homeSections ?? DEFAULT_DATA.homeSections).map((s: HomeSection) => ({
             ...s,
             fullWidth: s.fullWidth ?? true,
+            accordionItems: s.accordionItems ?? [],
           })),
         };
       }
@@ -403,10 +455,12 @@ export function SiteProvider({ children }: { children: ReactNode }) {
           whatsapp: { ...DEFAULT_DATA.whatsapp, ...remote.whatsapp },
           instagram: { ...DEFAULT_DATA.instagram, ...remote.instagram },
           htmlWidgets: remote.htmlWidgets ?? [],
+          about: { ...DEFAULT_DATA.about, ...remote.about },
           courseCategories: remote.courseCategories ?? DEFAULT_DATA.courseCategories,
           homeSections: (remote.homeSections ?? DEFAULT_DATA.homeSections).map((s: HomeSection) => ({
             ...s,
             fullWidth: s.fullWidth ?? true,
+            accordionItems: s.accordionItems ?? [],
           })),
         };
         setData(merged);
@@ -436,9 +490,11 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   const addCourse = (course: Course) => setData((d) => ({ ...d, courses: [...d.courses, course] }));
   const removeCourse = (id: string) => setData((d) => ({ ...d, courses: d.courses.filter((c) => c.id !== id) }));
   const updateCourseCategories = (courseCategories: string[]) => setData((d) => ({ ...d, courseCategories }));
+  const updateCoursesGridCols = (coursesGridCols: 2 | 3 | 4) => setData((d) => ({ ...d, coursesGridCols }));
   const updateInstagram = (instagram: InstagramConfig) => setData((d) => ({ ...d, instagram }));
   const updateWhatsApp = (whatsapp: WhatsAppConfig) => setData((d) => ({ ...d, whatsapp }));
   const updateHtmlWidgets = (htmlWidgets: HtmlWidget[]) => setData((d) => ({ ...d, htmlWidgets }));
+  const updateAbout = (about: AboutSection) => setData((d) => ({ ...d, about }));
   const updateAdminCredentials = (username: string, password: string) => setData((d) => ({ ...d, adminUser: { username, password } }));
 
   const loginAdmin = (username: string, password: string): boolean => {
@@ -462,8 +518,8 @@ export function SiteProvider({ children }: { children: ReactNode }) {
       data,
       updateHeader, updateFooter, updateColors, updateMenuItems,
       updateHomeSections, addHomeSection, removeHomeSection,
-      updateCourses, addCourse, removeCourse, updateCourseCategories,
-      updateInstagram, updateWhatsApp, updateHtmlWidgets,
+      updateCourses, addCourse, removeCourse, updateCourseCategories, updateCoursesGridCols,
+      updateInstagram, updateWhatsApp, updateHtmlWidgets, updateAbout,
       updateAdminCredentials,
       isAdminLoggedIn, loginAdmin, logoutAdmin,
       currentPage, setCurrentPage,

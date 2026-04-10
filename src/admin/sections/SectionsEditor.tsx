@@ -1,14 +1,26 @@
 import { useState } from "react";
 import {
   Plus, Trash2, Eye, EyeOff, Pencil, Check, X,
-  ChevronUp, ChevronDown, Image as ImageIcon, Video, Code,
+  ChevronUp, ChevronDown, Image as ImageIcon, Video, Code, ListCollapse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSite, type HomeSection, type SectionButton } from "../../context/SiteContext";
+import { useSite, type HomeSection, type SectionButton, type AccordionItem } from "../../context/SiteContext";
 import ImagePicker from "../../components/ImagePicker";
 
 const newId = () => Date.now().toString() + Math.random().toString(36).slice(2, 6);
+
+const ICON_OPTIONS = [
+  { value: "instagram", label: "📷 Instagram" },
+  { value: "facebook", label: "📘 Facebook" },
+  { value: "youtube", label: "▶️ YouTube" },
+  { value: "tiktok", label: "🎵 TikTok" },
+  { value: "web", label: "🌐 Web" },
+  { value: "tienda", label: "🛒 Tienda" },
+  { value: "email", label: "✉️ Email" },
+  { value: "telefono", label: "📞 Teléfono" },
+  { value: "ubicacion", label: "📍 Ubicación" },
+];
 
 const DEFAULT_SECTION: Omit<HomeSection, "id" | "order"> = {
   type: "image",
@@ -22,6 +34,7 @@ const DEFAULT_SECTION: Omit<HomeSection, "id" | "order"> = {
   showTitle: true,
   videoUrl: "",
   htmlCode: "",
+  accordionItems: [],
   buttons: [],
   link: "#cursos",
   visible: true,
@@ -123,6 +136,118 @@ function ButtonsEditor({
   );
 }
 
+// ─── Accordion Items Editor ──────────────────────────────────────────────────
+
+function AccordionItemsEditor({
+  items,
+  onChange,
+}: {
+  items: AccordionItem[];
+  onChange: (items: AccordionItem[]) => void;
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const add = () =>
+    onChange([
+      ...items,
+      { id: newId(), icon: "instagram", title: "Nueva sucursal", htmlCode: "" },
+    ]);
+
+  const remove = (idx: number) => {
+    const arr = [...items];
+    arr.splice(idx, 1);
+    onChange(arr);
+  };
+
+  const update = (idx: number, patch: Partial<AccordionItem>) => {
+    const arr = [...items];
+    arr[idx] = { ...arr[idx], ...patch };
+    onChange(arr);
+  };
+
+  return (
+    <div className="space-y-2">
+      {items.map((item, idx) => (
+        <div key={item.id} className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+          {/* Header row */}
+          <div className="flex items-center gap-2 p-3">
+            <span className="text-lg shrink-0">
+              {ICON_OPTIONS.find((o) => o.value === item.icon)?.label.slice(0, 2) ?? "📌"}
+            </span>
+            <span className="flex-1 text-sm font-semibold text-slate-700 truncate">{item.title}</span>
+            <button
+              type="button"
+              onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
+              className="p-1 text-blue-500 hover:bg-blue-50 rounded"
+              title="Editar"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => remove(idx)}
+              className="p-1 text-red-400 hover:bg-red-50 rounded"
+              title="Eliminar"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Expanded edit */}
+          {expandedId === item.id && (
+            <div className="border-t border-slate-200 p-3 space-y-3 bg-white">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Título</label>
+                  <Input
+                    value={item.title}
+                    onChange={(e) => update(idx, { title: e.target.value })}
+                    className="text-xs h-8"
+                    placeholder="Instagram Maldonado"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Ícono</label>
+                  <select
+                    value={item.icon}
+                    onChange={(e) => update(idx, { icon: e.target.value })}
+                    className="w-full h-8 text-xs border border-slate-200 rounded-md px-2"
+                  >
+                    {ICON_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Código HTML / Embed (widget de Instagram, etc.)
+                </label>
+                <textarea
+                  value={item.htmlCode}
+                  onChange={(e) => update(idx, { htmlCode: e.target.value })}
+                  rows={5}
+                  placeholder={'<script src="https://..."></script>\n<div class="elfsight-app-..."></div>'}
+                  className="w-full px-3 py-2 text-xs font-mono border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="w-full py-2 rounded-lg border border-dashed border-slate-300 text-slate-500 text-xs font-semibold hover:border-blue-400 hover:text-blue-600 transition-colors flex items-center justify-center gap-1.5"
+      >
+        <Plus className="w-3.5 h-3.5" /> Agregar Ítem del Acordeón
+      </button>
+    </div>
+  );
+}
+
 // ─── Edit Form ────────────────────────────────────────────────────────────────
 
 function EditForm({
@@ -147,9 +272,10 @@ function EditForm({
         <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
           Tipo de Sección
         </label>
-        <div className="flex gap-2">
-          {(["image", "video", "html"] as const).map((t) => {
-            const Icon = t === "image" ? ImageIcon : t === "video" ? Video : Code;
+        <div className="flex flex-wrap gap-2">
+          {(["image", "video", "html", "accordion"] as const).map((t) => {
+            const Icon = t === "image" ? ImageIcon : t === "video" ? Video : t === "accordion" ? ListCollapse : Code;
+            const label = t === "image" ? "Imagen" : t === "video" ? "Video" : t === "accordion" ? "Acordeón" : "HTML";
             return (
               <button
                 key={t}
@@ -160,7 +286,7 @@ function EditForm({
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
-                {t === "image" ? "Imagen" : t === "video" ? "Video" : "HTML"}
+                {label}
               </button>
             );
           })}
@@ -230,6 +356,22 @@ function EditForm({
             rows={5}
             placeholder="Pega aquí tu código HTML, widget de Instagram, embed, etc."
             className="w-full px-3 py-2 text-xs font-mono border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      )}
+
+      {/* Accordion items */}
+      {form.type === "accordion" && (
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
+            Ítems del Acordeón
+          </label>
+          <p className="text-xs text-slate-400 mb-3">
+            Cada ítem se despliega al hacer click. Ideal para mostrar embeds de Instagram, mapas, etc. por sucursal.
+          </p>
+          <AccordionItemsEditor
+            items={form.accordionItems ?? []}
+            onChange={(items) => setForm({ ...form, accordionItems: items })}
           />
         </div>
       )}
@@ -342,7 +484,7 @@ export default function SectionsEditor() {
   };
 
   const typeIcon = (t: HomeSection["type"]) =>
-    t === "video" ? <Video className="w-3 h-3" /> : t === "html" ? <Code className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />;
+    t === "video" ? <Video className="w-3 h-3" /> : t === "html" ? <Code className="w-3 h-3" /> : t === "accordion" ? <ListCollapse className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -368,9 +510,10 @@ export default function SectionsEditor() {
           <h3 className="font-semibold text-blue-900">Nueva Sección</h3>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
-            <div className="flex gap-2">
-              {(["image", "video", "html"] as const).map((t) => {
-                const Icon = t === "image" ? ImageIcon : t === "video" ? Video : Code;
+            <div className="flex flex-wrap gap-2">
+              {(["image", "video", "html", "accordion"] as const).map((t) => {
+                const Icon = t === "image" ? ImageIcon : t === "video" ? Video : t === "accordion" ? ListCollapse : Code;
+                const label = t === "image" ? "Imagen" : t === "video" ? "Video" : t === "accordion" ? "Acordeón" : "HTML";
                 return (
                   <button
                     key={t}
@@ -381,7 +524,7 @@ export default function SectionsEditor() {
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    {t === "image" ? "Imagen" : t === "video" ? "Video" : "HTML"}
+                    {label}
                   </button>
                 );
               })}
@@ -392,6 +535,8 @@ export default function SectionsEditor() {
               ? "Sección con imagen de fondo, título, subtítulo y botones."
               : addType === "video"
               ? "Sección con video de fondo (YouTube o MP4)."
+              : addType === "accordion"
+              ? "Sección con desplegables. Ideal para mostrar Instagram de cada sucursal."
               : "Sección para insertar código HTML/JS (widgets, embeds, etc.)."}
           </p>
           <div className="flex gap-3">
@@ -447,6 +592,8 @@ export default function SectionsEditor() {
                   />
                 ) : section.type === "video" ? (
                   <Video className="w-6 h-6 text-slate-400" />
+                ) : section.type === "accordion" ? (
+                  <ListCollapse className="w-6 h-6 text-slate-400" />
                 ) : (
                   <Code className="w-6 h-6 text-slate-400" />
                 )}
@@ -461,9 +608,15 @@ export default function SectionsEditor() {
                     {section.type}
                   </span>
                 </div>
-                <p className="text-sm text-slate-400 truncate">{section.subtitle}</p>
+                <p className="text-sm text-slate-400 truncate">
+                  {section.type === "accordion"
+                    ? `${(section.accordionItems ?? []).length} ítem(s)`
+                    : section.subtitle}
+                </p>
                 <p className="text-xs text-slate-300 mt-0.5">
-                  {section.height} · {section.fullWidth ? "full-width" : "contenedor"} · {section.buttons?.length ?? 0} btn(s)
+                  {section.type === "accordion"
+                    ? (section.accordionItems ?? []).map((i) => i.title).join(", ") || "Sin ítems"
+                    : `${section.height} · ${section.fullWidth ? "full-width" : "contenedor"} · ${section.buttons?.length ?? 0} btn(s)`}
                 </p>
               </div>
 

@@ -47,6 +47,17 @@ const upload = multer({
   },
 });
 
+const uploadVideo = multer({
+  storage,
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+    const allowed = /mp4|webm|ogg|mov/;
+    const okExt = allowed.test(path.extname(file.originalname).toLowerCase().replace(".", ""));
+    const okMime = /video\/(mp4|webm|ogg|quicktime)/.test(file.mimetype);
+    cb(null, okExt || okMime);
+  },
+});
+
 // ── Data helpers ───────────────────────────────────────────────────────────────
 function readData() {
   if (!fs.existsSync(DATA_FILE)) return null;
@@ -84,6 +95,14 @@ app.post("/api/data", (req, res) => {
 app.post("/api/upload", upload.single("image"), (req: Request, res: Response) => {
   const file = (req as Request & { file?: Express.Multer.File }).file;
   if (!file) return res.status(400).json({ error: "No file uploaded" });
+  const url = `http://localhost:${PORT}/uploads/${file.filename}`;
+  res.json({ url, filename: file.filename });
+});
+
+// POST /api/upload-video  → subir video, devuelve URL
+app.post("/api/upload-video", uploadVideo.single("video"), (req: Request, res: Response) => {
+  const file = (req as Request & { file?: Express.Multer.File }).file;
+  if (!file) return res.status(400).json({ error: "No video uploaded" });
   const url = `http://localhost:${PORT}/uploads/${file.filename}`;
   res.json({ url, filename: file.filename });
 });

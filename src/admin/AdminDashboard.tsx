@@ -26,6 +26,7 @@ import FooterEditor from "./sections/FooterEditor";
 import ColorsEditor from "./sections/ColorsEditor";
 import InstagramEditor from "./sections/InstagramEditor";
 import WhatsAppEditor from "./sections/WhatsAppEditor";
+import AboutEditor from "./sections/AboutEditor";
 
 type AdminSection =
   | "dashboard"
@@ -36,7 +37,8 @@ type AdminSection =
   | "footer"
   | "colors"
   | "instagram"
-  | "whatsapp";
+  | "whatsapp"
+  | "about";
 
 const NAV_ITEMS: {
   id: AdminSection;
@@ -92,6 +94,12 @@ const NAV_ITEMS: {
     description: "Botón flotante configurable",
     icon: MessageCircle,
   },
+  {
+    id: "about",
+    label: "Sobre Nosotros",
+    description: "Sección de presentación con video de fondo",
+    icon: GraduationCap,
+  },
 ];
 
 export default function AdminDashboard() {
@@ -117,6 +125,8 @@ export default function AdminDashboard() {
         return <InstagramEditor />;
       case "whatsapp":
         return <WhatsAppEditor />;
+      case "about":
+        return <AboutEditor />;
       default:
         return <DashboardHome onNavigate={setActiveSection} />;
     }

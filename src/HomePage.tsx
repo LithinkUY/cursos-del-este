@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
-import { motion } from "motion/react";
+import { useState, useEffect, useRef, useCallback, type MouseEvent as ReactMouseEvent } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   GraduationCap,
   Clock,
   ChevronRight,
+  ChevronDown,
   Menu,
   Facebook,
   Instagram,
@@ -86,6 +87,185 @@ function SectionBtns({
         );
       })}
     </div>
+  );
+}
+
+// ─── Accordion Section ────────────────────────────────────────────────────────
+
+/**
+ * Renders arbitrary HTML + <script> tags so embedded widgets (Elfsight, etc.) load.
+ * – External scripts (src) are loaded once globally.
+ * – After injecting HTML, re-triggers widget platforms to scan new DOM elements.
+ * – Content stays mounted; `visible` only controls when to first inject.
+ */
+function EmbedHtml({ html, visible }: { html: string; visible: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    // Only inject once, on first time becoming visible
+    if (!visible || loadedRef.current) return;
+    const el = containerRef.current;
+    if (!el || !html) return;
+    loadedRef.current = true;
+
+    // Parse HTML: separate markup from scripts
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+
+    // Remove scripts from the parsed HTML, collect them
+    const scriptNodes = tmp.querySelectorAll("script");
+    const scriptInfos: { src: string; text: string }[] = [];
+    scriptNodes.forEach((s) => {
+      scriptInfos.push({ src: s.src || "", text: s.textContent || "" });
+      s.remove();
+    });
+
+    // Insert the non-script HTML
+    el.innerHTML = tmp.innerHTML;
+
+    // Load external scripts, skip duplicates
+    scriptInfos.forEach(({ src, text }) => {
+      if (src) {
+        if (!document.querySelector(`script[src="${src}"]`)) {
+          const s = document.createElement("script");
+          s.src = src;
+          s.async = true;
+          document.body.appendChild(s);
+        }
+      } else if (text) {
+        const s = document.createElement("script");
+        s.textContent = text;
+        document.body.appendChild(s);
+      }
+    });
+
+    // Re-trigger Elfsight / other widget platforms to discover new DOM elements
+    const retrigger = () => {
+      try {
+        const w = window as any;
+        // Elfsight v2 platform
+        if (w.eapps?.AppsManager) {
+          w.eapps.AppsManager.applyWidgets();
+        }
+        // Elfsight newer versions
+        if (w.ElfsightPlatform) {
+          w.ElfsightPlatform.init?.();
+        }
+        // Force re-scan by dispatching a custom event some platforms listen to
+        window.dispatchEvent(new Event("elfsight:ready"));
+      } catch {
+        // silently ignore
+      }
+    };
+
+    // Retry multiple times – the platform script loads async
+    const timers = [300, 1000, 2000, 4000, 6000].map((ms) => setTimeout(retrigger, ms));
+    return () => timers.forEach(clearTimeout);
+  }, [html, visible]);
+
+  return <div ref={containerRef} style={{ minHeight: visible ? 80 : 0 }} />;
+}
+
+const ICON_MAP: Record<string, string> = {
+  instagram: "📷",
+  facebook: "📘",
+  youtube: "▶️",
+  tiktok: "🎵",
+  web: "🌐",
+  tienda: "🛒",
+  email: "✉️",
+  telefono: "📞",
+  ubicacion: "📍",
+};
+
+function AccordionSection({
+  section,
+  colors,
+}: {
+  section: HomeSection;
+  colors: Record<string, string>;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const items = section.accordionItems ?? [];
+
+  // Pre-load the Elfsight platform script once when the accordion section mounts
+  useEffect(() => {
+    if (items.length === 0) return;
+    // Check if any item uses elfsight
+    const usesElfsight = items.some(
+      (i) => i.htmlCode.includes("elfsight") || i.htmlCode.includes("static.elfsight.com")
+    );
+    if (usesElfsight && !document.querySelector('script[src*="elfsight.com/platform/platform.js"]')) {
+      const s = document.createElement("script");
+      s.src = "https://static.elfsight.com/platform/platform.js";
+      s.async = true;
+      document.body.appendChild(s);
+    }
+  }, [items]);
+
+  if (items.length === 0) return null;
+
+  const toggle = (id: string) => setOpenId((prev) => (prev === id ? null : id));
+
+  return (
+    <section
+      className="py-16"
+      style={{ background: colors.background ?? "#111827" }}
+    >
+      <div className="container mx-auto px-4 max-w-3xl">
+        {section.showTitle !== false && section.title && (
+          <h2
+            className="text-2xl md:text-3xl font-bold text-center mb-10"
+            style={{ color: colors.secondary }}
+          >
+            {section.title}
+          </h2>
+        )}
+
+        <div className="space-y-3">
+          {items.map((item) => {
+            const isOpen = openId === item.id;
+            const iconChar = ICON_MAP[item.icon?.toLowerCase() ?? ""] ?? item.icon ?? "📌";
+            return (
+              <div
+                key={item.id}
+                className="rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900/60 backdrop-blur"
+              >
+                {/* Header */}
+                <button
+                  onClick={() => toggle(item.id)}
+                  className="w-full flex items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-slate-800/60"
+                >
+                  <span className="text-xl shrink-0">{iconChar}</span>
+                  <span className="flex-1 font-semibold text-white tracking-wide uppercase text-sm">
+                    {item.title}
+                  </span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {/* Content — stays mounted so scripts / widgets survive toggling */}
+                <div
+                  className="transition-all duration-300 ease-in-out"
+                  style={{
+                    maxHeight: isOpen ? 2000 : 0,
+                    opacity: isOpen ? 1 : 0,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div className="px-5 pb-5">
+                    <EmbedHtml html={item.htmlCode} visible={isOpen} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -214,6 +394,13 @@ function SectionBlock({
     );
   }
 
+  // accordion
+  if (section.type === "accordion") {
+    return (
+      <AccordionSection section={section} colors={colors} />
+    );
+  }
+
   return null;
 }
 
@@ -326,14 +513,35 @@ function HeroBanner({ colors, waUrl }: { colors: Record<string, string>; waUrl: 
 
 export default function HomePage() {
   const { data, setCurrentPage, setSelectedCourseId } = useSite();
-  const { header, footer, colors, menuItems, homeSections, courses, instagram, whatsapp } = data;
+  const { header, footer, colors, menuItems, homeSections, courses, instagram, whatsapp, about } = data;
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [openMobileSub, setOpenMobileSub] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const _waRef = useRef<HTMLAnchorElement>(null);
+
+  /* Handle special menu links: #curso:ID and #categoria:NAME */
+  const handleMenuClick = (e: ReactMouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith("#curso:")) {
+      e.preventDefault();
+      const courseId = href.replace("#curso:", "");
+      setSelectedCourseId(courseId);
+      setCurrentPage("course");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setMobileMenuOpen(false);
+    } else if (href.startsWith("#categoria:")) {
+      e.preventDefault();
+      const cat = decodeURIComponent(href.replace("#categoria:", ""));
+      setCategoryFilter(cat);
+      setMobileMenuOpen(false);
+      setTimeout(() => {
+        document.getElementById("cursos")?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    }
+  };
 
   useEffect(() => {
     const onScroll = () => {
@@ -348,6 +556,12 @@ export default function HomePage() {
     .filter((s) => s.visible)
     .sort((a, b) => a.order - b.order);
   const visibleCourses = courses.filter((c) => c.visible);
+  const filteredCourses = categoryFilter
+    ? visibleCourses.filter((c) => c.category === categoryFilter)
+    : visibleCourses;
+
+  /* Unique categories actually in use */
+  const usedCategories = [...new Set(visibleCourses.map((c) => c.category).filter(Boolean))];
 
   const waUrl =
     whatsapp?.phone
@@ -357,10 +571,10 @@ export default function HomePage() {
   const navTransparentNow = header.navTransparent && !isScrolled;
   const navBg = navTransparentNow
     ? "bg-transparent"
-    : "bg-white/95 backdrop-blur-md shadow-sm";
+    : "bg-black/90 backdrop-blur-md shadow-sm";
   const navTextColor = navTransparentNow
     ? "#ffffff"
-    : header.navTextColor ?? colors.secondary;
+    : "#ffffff";
 
   return (
     <div className="min-h-screen font-sans" style={{ background: colors.background, color: colors.text }}>
@@ -404,6 +618,7 @@ export default function HomePage() {
                 >
                   <a
                     href={item.href}
+                    onClick={(e) => handleMenuClick(e, item.href)}
                     className="flex items-center gap-1 text-sm font-semibold transition-opacity hover:opacity-70"
                     style={{ color: navTextColor }}
                   >
@@ -420,6 +635,7 @@ export default function HomePage() {
                         <a
                           key={sub.id}
                           href={sub.href}
+                          onClick={(e) => handleMenuClick(e, sub.href)}
                           className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors"
                         >
                           {sub.label}
@@ -470,7 +686,10 @@ export default function HomePage() {
                           <a
                             href={item.href}
                             className="flex-1 py-2.5 text-base font-semibold text-slate-700 hover:text-blue-600 transition-colors"
-                            onClick={() => !hasSub && setMobileMenuOpen(false)}
+                            onClick={(e) => {
+                              handleMenuClick(e, item.href);
+                              if (!hasSub) setMobileMenuOpen(false);
+                            }}
                           >
                             {item.label}
                           </a>
@@ -492,7 +711,10 @@ export default function HomePage() {
                                 key={sub.id}
                                 href={sub.href}
                                 className="py-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
-                                onClick={() => setMobileMenuOpen(false)}
+                                onClick={(e) => {
+                                  handleMenuClick(e, sub.href);
+                                  setMobileMenuOpen(false);
+                                }}
                               >
                                 {sub.label}
                               </a>
@@ -541,9 +763,39 @@ export default function HomePage() {
               <p className="text-slate-500 max-w-xl mx-auto">
                 Elegí la capacitación que más se adapta a tus objetivos.
               </p>
+              {/* Category filter tabs */}
+              {usedCategories.length > 1 && (
+                <div className="flex flex-wrap justify-center gap-2 mt-6">
+                  <button
+                    onClick={() => setCategoryFilter(null)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                      !categoryFilter
+                        ? "text-white border-transparent"
+                        : "text-slate-600 border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                    style={!categoryFilter ? { background: colors.primary, borderColor: colors.primary } : undefined}
+                  >
+                    Todos
+                  </button>
+                  {usedCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCategoryFilter(cat)}
+                      className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                        categoryFilter === cat
+                          ? "text-white border-transparent"
+                          : "text-slate-600 border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                      style={categoryFilter === cat ? { background: colors.primary, borderColor: colors.primary } : undefined}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {visibleCourses.map((course, i) => (
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${data.coursesGridCols === 2 ? "lg:grid-cols-2" : data.coursesGridCols === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-8`}>
+              {filteredCourses.map((course, i) => (
                 <motion.div
                   key={course.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -648,70 +900,103 @@ export default function HomePage() {
       )}
 
       {/* ── NOSOTROS ────────────────────────────────────────────────────────── */}
-      <section id="nosotros" className="py-20 bg-slate-50">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row items-center gap-16">
-            <div className="flex-1">
-              <Badge
-                className="mb-4 border-none text-sm px-3 py-1"
-                style={{ background: `${colors.primary}18`, color: colors.primary }}
-              >
-                Sobre Nosotros
-              </Badge>
-              <h2
-                className="text-3xl md:text-4xl font-bold mb-5 leading-tight"
-                style={{ color: colors.secondary }}
-              >
-                Líderes en capacitación técnica en la región
-              </h2>
-              <p className="text-slate-600 mb-6 text-base leading-relaxed">{footer.description}</p>
-              <div className="space-y-3 mb-8">
-                {[
-                  "Metodología 100% práctica y con salida laboral",
-                  "Instructores con experiencia real en la industria",
-                  "Horarios flexibles — mañana, tarde y noche",
-                  "Comunidad de egresados que triunfan en sus campos",
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="mt-1 rounded-full p-1 shrink-0" style={{ background: colors.primary }}>
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="text-slate-700 text-sm font-medium">{item}</span>
-                  </div>
-                ))}
-              </div>
-              {whatsapp?.enabled && (
-                <a
-                  href={waUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-7 py-3 rounded-full font-bold text-white text-sm shadow-lg transition-all hover:scale-105"
-                  style={{ background: "#25d366" }}
+      {about.visible && (
+        <section id="nosotros" className="relative py-20 overflow-hidden">
+          {/* Background: video / image / plain */}
+          {about.bgType === "video" && about.bgVideo && (
+            <video
+              src={about.bgVideo}
+              className="absolute inset-0 w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          )}
+          {about.bgType === "image" && about.bgImage && (
+            <img
+              src={about.bgImage}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          )}
+          {about.bgType !== "none" && (
+            <div
+              className="absolute inset-0"
+              style={{ background: `rgba(0,0,0,${(about.overlayOpacity ?? 40) / 100})` }}
+            />
+          )}
+          {about.bgType === "none" && <div className="absolute inset-0 bg-slate-50" />}
+
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="flex flex-col lg:flex-row items-center gap-16">
+              <div className="flex-1">
+                <Badge
+                  className="mb-4 border-none text-sm px-3 py-1"
+                  style={{ background: `${colors.primary}18`, color: about.bgType !== "none" ? "#fff" : colors.primary }}
                 >
-                  <MessageCircle className="w-4 h-4" />
-                  Consultanos por WhatsApp
-                </a>
+                  {about.badge}
+                </Badge>
+                <h2
+                  className="text-3xl md:text-4xl font-bold mb-5 leading-tight"
+                  style={{ color: about.bgType !== "none" ? "#ffffff" : colors.secondary }}
+                >
+                  {about.title}
+                </h2>
+                <p
+                  className="mb-6 text-base leading-relaxed"
+                  style={{ color: about.bgType !== "none" ? "rgba(255,255,255,0.85)" : "#64748b" }}
+                >
+                  {about.description}
+                </p>
+                <div className="space-y-3 mb-8">
+                  {about.bulletPoints.map((item, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="mt-1 rounded-full p-1 shrink-0" style={{ background: colors.primary }}>
+                        <CheckCircle2 className="w-3 h-3 text-white" />
+                      </div>
+                      <span
+                        className="text-sm font-medium"
+                        style={{ color: about.bgType !== "none" ? "rgba(255,255,255,0.9)" : "#334155" }}
+                      >
+                        {item}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {whatsapp?.enabled && (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-7 py-3 rounded-full font-bold text-white text-sm shadow-lg transition-all hover:scale-105"
+                    style={{ background: "#25d366" }}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Consultanos por WhatsApp
+                  </a>
+                )}
+              </div>
+              {about.images.length > 0 && (
+                <div className="flex-1">
+                  <div className="grid grid-cols-2 gap-4">
+                    {about.images.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        alt={`About ${i + 1}`}
+                        className={`rounded-2xl w-full h-56 object-cover shadow-lg ${i % 2 !== 0 ? "mt-10" : ""}`}
+                        referrerPolicy="no-referrer"
+                      />
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
-            <div className="flex-1">
-              <div className="grid grid-cols-2 gap-4">
-                <img
-                  src="https://picsum.photos/seed/learn1/400/500"
-                  alt="Clase"
-                  className="rounded-2xl w-full h-56 object-cover shadow-lg"
-                  referrerPolicy="no-referrer"
-                />
-                <img
-                  src="https://picsum.photos/seed/learn2/400/500"
-                  alt="Estudiante"
-                  className="rounded-2xl w-full h-56 object-cover shadow-lg mt-10"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
       <footer id="contacto" className="bg-slate-900 text-slate-300 pt-16 pb-8">
@@ -769,7 +1054,11 @@ export default function HomePage() {
               <ul className="space-y-3 text-sm">
                 {[...menuItems].sort((a, b) => a.order - b.order).map((item) => (
                   <li key={item.id}>
-                    <a href={item.href} className="hover:text-blue-400 transition-colors">
+                    <a
+                      href={item.href}
+                      onClick={(e) => handleMenuClick(e, item.href)}
+                      className="hover:text-blue-400 transition-colors"
+                    >
                       {item.label}
                     </a>
                   </li>

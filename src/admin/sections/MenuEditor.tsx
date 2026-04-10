@@ -14,12 +14,14 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, GripVertical, CornerDownRight } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, GripVertical, CornerDownRight, Link, BookOpen, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSite, type MenuItem } from "../../context/SiteContext";
 
 const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+type LinkType = "url" | "course" | "category";
 
 // ── Inline edit form ──────────────────────────────────────────────────────────
 function EditRow({
@@ -31,34 +33,118 @@ function EditRow({
   onSave: (updated: MenuItem) => void;
   onCancel: () => void;
 }) {
+  const { data } = useSite();
   const [form, setForm] = useState<MenuItem>({ ...item });
+
+  // Detect initial link type
+  const detectType = (href: string): LinkType => {
+    if (href.startsWith("#curso:")) return "course";
+    if (href.startsWith("#categoria:")) return "category";
+    return "url";
+  };
+  const [linkType, setLinkType] = useState<LinkType>(detectType(item.href));
+
+  const handleTypeChange = (type: LinkType) => {
+    setLinkType(type);
+    if (type === "url") setForm({ ...form, href: "" });
+    else if (type === "course") {
+      const first = data.courses[0];
+      setForm({ ...form, href: first ? `#curso:${first.id}` : "", label: form.label || (first?.title ?? "") });
+    } else {
+      const first = data.courseCategories[0];
+      setForm({ ...form, href: first ? `#categoria:${first}` : "", label: form.label || (first ?? "") });
+    }
+  };
+
   return (
-    <div className="flex flex-col sm:flex-row gap-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
-      <Input
-        value={form.label}
-        onChange={(e) => setForm({ ...form, label: e.target.value })}
-        placeholder="Etiqueta"
-        className="flex-1 h-8 text-sm"
-      />
-      <Input
-        value={form.href}
-        onChange={(e) => setForm({ ...form, href: e.target.value })}
-        placeholder="URL ej: /cursos o #cursos"
-        className="flex-1 h-8 text-sm"
-      />
+    <div className="flex flex-col gap-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+      {/* Link type selector */}
       <div className="flex gap-1">
         <button
-          onClick={() => onSave(form)}
-          className="p-1.5 rounded bg-green-500 hover:bg-green-600 text-white"
+          onClick={() => handleTypeChange("url")}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${linkType === "url" ? "bg-blue-600 text-white" : "bg-white text-slate-600 border hover:bg-slate-50"}`}
         >
-          <Check className="w-3.5 h-3.5" />
+          <Link className="w-3 h-3" /> Enlace
         </button>
         <button
-          onClick={onCancel}
-          className="p-1.5 rounded bg-slate-300 hover:bg-slate-400 text-slate-700"
+          onClick={() => handleTypeChange("course")}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${linkType === "course" ? "bg-blue-600 text-white" : "bg-white text-slate-600 border hover:bg-slate-50"}`}
         >
-          <X className="w-3.5 h-3.5" />
+          <BookOpen className="w-3 h-3" /> Curso
         </button>
+        <button
+          onClick={() => handleTypeChange("category")}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${linkType === "category" ? "bg-blue-600 text-white" : "bg-white text-slate-600 border hover:bg-slate-50"}`}
+        >
+          <Tag className="w-3 h-3" /> Categoría
+        </button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Input
+          value={form.label}
+          onChange={(e) => setForm({ ...form, label: e.target.value })}
+          placeholder="Etiqueta"
+          className="flex-1 h-8 text-sm"
+        />
+
+        {linkType === "url" && (
+          <Input
+            value={form.href}
+            onChange={(e) => setForm({ ...form, href: e.target.value })}
+            placeholder="URL ej: /cursos o #cursos"
+            className="flex-1 h-8 text-sm"
+          />
+        )}
+
+        {linkType === "course" && (
+          <select
+            value={form.href}
+            onChange={(e) => {
+              const courseId = e.target.value;
+              const course = data.courses.find((c) => `#curso:${c.id}` === courseId);
+              setForm({ ...form, href: courseId, label: form.label || (course?.title ?? "") });
+            }}
+            className="flex-1 h-8 text-sm border rounded-md px-2 bg-white"
+          >
+            <option value="">-- Seleccionar curso --</option>
+            {data.courses.filter(c => c.visible).map((c) => (
+              <option key={c.id} value={`#curso:${c.id}`}>{c.title}</option>
+            ))}
+          </select>
+        )}
+
+        {linkType === "category" && (
+          <select
+            value={form.href}
+            onChange={(e) => {
+              const cat = e.target.value;
+              const catName = cat.replace("#categoria:", "");
+              setForm({ ...form, href: cat, label: form.label || catName });
+            }}
+            className="flex-1 h-8 text-sm border rounded-md px-2 bg-white"
+          >
+            <option value="">-- Seleccionar categoría --</option>
+            {data.courseCategories.map((cat) => (
+              <option key={cat} value={`#categoria:${cat}`}>{cat}</option>
+            ))}
+          </select>
+        )}
+
+        <div className="flex gap-1">
+          <button
+            onClick={() => onSave(form)}
+            className="p-1.5 rounded bg-green-500 hover:bg-green-600 text-white"
+          >
+            <Check className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onCancel}
+            className="p-1.5 rounded bg-slate-300 hover:bg-slate-400 text-slate-700"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );

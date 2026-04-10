@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Eye, EyeOff, Pencil, Check, X, Star, Tag } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, Pencil, Check, X, Star, Tag, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSite, type Course } from "../../context/SiteContext";
@@ -19,7 +19,7 @@ const EMPTY_COURSE: Partial<Course> = {
 };
 
 export default function CoursesEditor() {
-  const { data, updateCourses, addCourse, removeCourse, updateCourseCategories } = useSite();
+  const { data, updateCourses, addCourse, removeCourse, updateCourseCategories, updateCoursesGridCols } = useSite();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Course>>({});
   const [addForm, setAddForm] = useState<Partial<Course>>({ ...EMPTY_COURSE });
@@ -187,6 +187,23 @@ export default function CoursesEditor() {
             Nuevo Curso
           </Button>
         </div>
+      </div>
+
+      {/* Grid columns selector */}
+      <div className="flex items-center gap-3 bg-slate-50 border rounded-lg px-4 py-3">
+        <LayoutGrid className="w-4 h-4 text-slate-500" />
+        <span className="text-sm font-medium text-slate-700">Columnas por fila:</span>
+        {([2, 3, 4] as const).map((n) => (
+          <Button
+            key={n}
+            variant={(data.coursesGridCols ?? 3) === n ? "default" : "outline"}
+            size="sm"
+            onClick={() => updateCoursesGridCols(n)}
+            className="w-10"
+          >
+            {n}
+          </Button>
+        ))}
       </div>
 
       {/* Category Manager */}
