@@ -1,0 +1,223 @@
+{
+  "adminUser": {
+    "username": "admin",
+    "password": "admin123"
+  },
+  "header": {
+    "logoUrl": "",
+    "logoWidth": 160,
+    "siteName": "Cursos del Este",
+    "showSiteName": true,
+    "enabled": true,
+    "bgType": "image",
+    "bgImage": "https://picsum.photos/seed/hero-banner/1600/900",
+    "bgColor": "#1e3a8a",
+    "bgVideo": "",
+    "overlayColor": "#000000",
+    "overlayOpacity": 45,
+    "tagline": "El poder de aprender",
+    "taglineEnabled": true,
+    "title": "Cursos del Este",
+    "titleEnabled": true,
+    "subtitle": "Tu mejor opción para capacitarte. Cursos prácticos con salida laboral.",
+    "subtitleEnabled": true,
+    "ctaButtons": [
+      {
+        "id": "1",
+        "label": "Ver Cursos",
+        "link": "#cursos",
+        "style": "primary"
+      },
+      {
+        "id": "2",
+        "label": "Inscribirse",
+        "link": "https://api.whatsapp.com/send?phone=59898942143",
+        "style": "white"
+      }
+    ],
+    "navTransparent": true,
+    "navBgColor": "#ffffff",
+    "navTextColor": "#d1d1d1",
+    "height": "large",
+    "logo": "",
+    "showCTA": true,
+    "ctaText": "Inscribirse",
+    "ctaLink": "#contacto"
+  },
+  "footer": {
+    "description": "Líderes en capacitación profesional con miles de egresados que hoy triunfan en sus respectivos campos.",
+    "address": "Av. Principal 123, Maldonado, Uruguay",
+    "phone": "+598 42XX XXXX",
+    "phone2": "093 715 636",
+    "email": "info@cursosdeleste.com",
+    "facebook": "#",
+    "instagram": "#",
+    "instagram2": "https://instagram.com/CURSOSDELESTEMINAS",
+    "instagram3": "https://instagram.com/CURSOSDELESTEROCHA",
+    "twitter": "#",
+    "copyright": "© 2026 Cursos del Este. Todos los derechos reservados."
+  },
+  "colors": {
+    "primary": "#2563eb",
+    "secondary": "#404040",
+    "accent": "#dedede",
+    "background": "#000000",
+    "text": "#0f172a"
+  },
+  "menuItems": [
+    {
+      "id": "1",
+      "label": "Inicio",
+      "href": "#",
+      "order": 1
+    },
+    {
+      "id": "2",
+      "label": "Cursos",
+      "href": "#cursos",
+      "order": 2
+    },
+    {
+      "id": "3",
+      "label": "Nosotros",
+      "href": "#nosotros",
+      "order": 3
+    },
+    {
+      "id": "4",
+      "label": "Contacto",
+      "href": "#contacto",
+      "order": 4
+    }
+  ],
+  "homeSections": [
+    {
+      "id": "2",
+      "title": "Idiomas",
+      "subtitle": "Inglés, Portugués y más",
+      "image": "https://picsum.photos/seed/idiomas/800/600",
+      "link": "#cursos",
+      "order": 2,
+      "visible": true
+    },
+    {
+      "id": "3",
+      "title": "Administración",
+      "subtitle": "Secretariado, Contabilidad",
+      "image": "https://picsum.photos/seed/adminstracion/800/600",
+      "link": "#cursos",
+      "order": 3,
+      "visible": true
+    },
+    {
+      "id": "4",
+      "title": "Oficios",
+      "subtitle": "Electricidad, Gastronomía",
+      "image": "https://picsum.photos/seed/oficios/800/600",
+      "link": "#cursos",
+      "order": 4,
+      "visible": true
+    },
+    {
+      "id": "5",
+      "title": "Marketing Digital",
+      "subtitle": "Redes Sociales, SEO, Publicidad",
+      "image": "https://picsum.photos/seed/marketing2/800/600",
+      "link": "#cursos",
+      "order": 5,
+      "visible": true
+    },
+    {
+      "id": "6",
+      "title": "Diseño",
+      "subtitle": "Gráfico, Web y Multimedia",
+      "image": "https://picsum.photos/seed/diseno/800/600",
+      "link": "#cursos",
+      "order": 6,
+      "visible": true
+    }
+  ],
+  "courses": [
+    {
+      "id": "1",
+      "title": "Excel Avanzado para Negocios",
+      "category": "Informática",
+      "price": "$4500",
+      "duration": "4 semanas",
+      "description": "Aprende Excel desde cero hasta nivel avanzado con aplicaciones reales para empresas.",
+      "image": "https://picsum.photos/seed/excel/800/600",
+      "featured": true,
+      "visible": true
+    },
+    {
+      "id": "2",
+      "title": "Inglés para Viajeros",
+      "category": "Idiomas",
+      "price": "$3800",
+      "duration": "6 semanas",
+      "description": "Comunicación básica y avanzada para viajes y contextos internacionales.",
+      "image": "https://picsum.photos/seed/english/800/600",
+      "featured": true,
+      "visible": true
+    },
+    {
+      "id": "3",
+      "title": "Secretariado Ejecutivo",
+      "category": "Administración",
+      "price": "$5200",
+      "duration": "8 semanas",
+      "description": "Formación completa para asistentes y secretarios con herramientas modernas.",
+      "image": "https://picsum.photos/seed/admin/800/600",
+      "featured": true,
+      "visible": true
+    },
+    {
+      "id": "4",
+      "title": "Reparación de PC",
+      "category": "Oficios",
+      "price": "$4000",
+      "duration": "5 semanas",
+      "description": "Diagnóstico, mantenimiento y reparación de computadoras de escritorio y notebooks.",
+      "image": "https://picsum.photos/seed/pc/800/600",
+      "featured": false,
+      "visible": true
+    },
+    {
+      "id": "5",
+      "title": "Marketing Digital",
+      "category": "Administración",
+      "price": "$4800",
+      "duration": "4 semanas",
+      "description": "Estrategias de marketing en redes sociales, Google Ads y email marketing.",
+      "image": "https://picsum.photos/seed/marketing/800/600",
+      "featured": false,
+      "visible": true
+    },
+    {
+      "id": "6",
+      "title": "Diseño Gráfico",
+      "category": "Informática",
+      "price": "$5500",
+      "duration": "10 semanas",
+      "description": "Illustrator, Photoshop y herramientas de diseño para crear piezas profesionales.",
+      "image": "https://picsum.photos/seed/design/800/600",
+      "featured": false,
+      "visible": true
+    }
+  ],
+  "instagram": {
+    "enabled": false,
+    "embedCode": "",
+    "username": "",
+    "username2": "CURSOSDELESTEMINAS",
+    "username3": "CURSOSDELESTEROCHA"
+  },
+  "whatsapp": {
+    "enabled": true,
+    "phone": "59898942143",
+    "message": "Hola! Quiero información sobre los cursos.",
+    "label": "INSCRIBETE",
+    "position": "bottom-right"
+  },
+  "htmlWidgets": []
+}
