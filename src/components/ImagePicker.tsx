@@ -3,7 +3,7 @@ import { Upload, Link, ImageIcon, X, Check, Trash2, Loader2, RefreshCw } from "l
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-const BACKEND = "http://localhost:3001";
+const BACKEND = "";
 
 type Tab = "url" | "upload" | "gallery";
 
@@ -54,7 +54,7 @@ export default function ImagePicker({ value, onChange, label = "Imagen", classNa
   const loadGallery = useCallback(async () => {
     setGalleryLoading(true);
     try {
-      const r = await fetch(`${BACKEND}/api/uploads`);
+      const r = await fetch(`${BACKEND}/api/upload`);
       if (r.ok) setGallery(await r.json());
     } catch { /* backend offline */ }
     setGalleryLoading(false);
@@ -102,7 +102,14 @@ export default function ImagePicker({ value, onChange, label = "Imagen", classNa
   const deleteFile = async (filename: string) => {
     setDeleting(filename);
     try {
-      await fetch(`${BACKEND}/api/upload/${filename}`, { method: "DELETE" });
+      // Find the full URL from gallery
+      const file = gallery.find((f) => f.filename === filename);
+      const url = file?.url || filename;
+      await fetch(`${BACKEND}/api/upload`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
       setGallery((g) => g.filter((f) => f.filename !== filename));
       if (value.includes(filename)) onChange("");
     } catch { /* ignore */ }

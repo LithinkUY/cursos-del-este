@@ -392,7 +392,8 @@ interface SiteContextType {
   updateAbout: (about: AboutSection) => void;
   updateAdminCredentials: (username: string, password: string) => void;
   isAdminLoggedIn: boolean;
-  loginAdmin: (username: string, password: string) => boolean;
+  adminUsername: string;
+  loginAdmin: (username: string, password: string) => Promise<boolean>;
   logoutAdmin: () => void;
   currentPage: string;
   setCurrentPage: (page: string) => void;
@@ -400,7 +401,7 @@ interface SiteContextType {
   setSelectedCourseId: (id: string | null) => void;
 }
 
-const BACKEND = "http://localhost:3001";
+const BACKEND = "";
 
 const SiteContext = createContext<SiteContextType | null>(null);
 
@@ -497,18 +498,43 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   const updateAbout = (about: AboutSection) => setData((d) => ({ ...d, about }));
   const updateAdminCredentials = (username: string, password: string) => setData((d) => ({ ...d, adminUser: { username, password } }));
 
-  const loginAdmin = (username: string, password: string): boolean => {
-    if (username === data.adminUser.username && password === data.adminUser.password) {
-      setIsAdminLoggedIn(true);
-      sessionStorage.setItem("admin_logged", "true");
-      return true;
+  const [adminUsername, setAdminUsername] = useState(() => {
+    return sessionStorage.getItem("admin_username") || "";
+  });
+
+  const loginAdmin = async (username: string, password: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${BACKEND}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (res.ok) {
+        setIsAdminLoggedIn(true);
+        setAdminUsername(username);
+        sessionStorage.setItem("admin_logged", "true");
+        sessionStorage.setItem("admin_username", username);
+        return true;
+      }
+      return false;
+    } catch {
+      // Fallback to local check if API is unreachable (dev mode)
+      if (username === data.adminUser.username && password === data.adminUser.password) {
+        setIsAdminLoggedIn(true);
+        setAdminUsername(username);
+        sessionStorage.setItem("admin_logged", "true");
+        sessionStorage.setItem("admin_username", username);
+        return true;
+      }
+      return false;
     }
-    return false;
   };
 
   const logoutAdmin = () => {
     setIsAdminLoggedIn(false);
+    setAdminUsername("");
     sessionStorage.removeItem("admin_logged");
+    sessionStorage.removeItem("admin_username");
     setCurrentPage("home");
     setSelectedCourseId(null);
   };
@@ -521,7 +547,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
       updateCourses, addCourse, removeCourse, updateCourseCategories, updateCoursesGridCols,
       updateInstagram, updateWhatsApp, updateHtmlWidgets, updateAbout,
       updateAdminCredentials,
-      isAdminLoggedIn, loginAdmin, logoutAdmin,
+      isAdminLoggedIn, adminUsername, loginAdmin, logoutAdmin,
       currentPage, setCurrentPage,
       selectedCourseId, setSelectedCourseId,
     }}>

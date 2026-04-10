@@ -16,8 +16,7 @@ export default function AdminLogin() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    const ok = loginAdmin(username, password);
+    const ok = await loginAdmin(username, password);
     if (ok) {
       setCurrentPage("admin-dashboard");
     } else {

@@ -34,7 +34,7 @@ export default function AboutEditor() {
     try {
       const form = new FormData();
       form.append("video", file);
-      const res = await fetch("http://localhost:3001/api/upload-video", {
+      const res = await fetch("/api/upload", {
         method: "POST",
         body: form,
       });

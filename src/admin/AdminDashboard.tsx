@@ -13,6 +13,7 @@ import {
   ChevronRight,
   GraduationCap,
   X,
+  KeyRound,
 } from "lucide-react";
 import { useSite } from "../context/SiteContext";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import ColorsEditor from "./sections/ColorsEditor";
 import InstagramEditor from "./sections/InstagramEditor";
 import WhatsAppEditor from "./sections/WhatsAppEditor";
 import AboutEditor from "./sections/AboutEditor";
+import PasswordEditor from "./sections/PasswordEditor";
 
 type AdminSection =
   | "dashboard"
@@ -38,7 +40,8 @@ type AdminSection =
   | "colors"
   | "instagram"
   | "whatsapp"
-  | "about";
+  | "about"
+  | "password";
 
 const NAV_ITEMS: {
   id: AdminSection;
@@ -100,6 +103,12 @@ const NAV_ITEMS: {
     description: "Sección de presentación con video de fondo",
     icon: GraduationCap,
   },
+  {
+    id: "password",
+    label: "Cambiar Contraseña",
+    description: "Actualizar la contraseña del administrador",
+    icon: KeyRound,
+  },
 ];
 
 export default function AdminDashboard() {
@@ -127,6 +136,8 @@ export default function AdminDashboard() {
         return <WhatsAppEditor />;
       case "about":
         return <AboutEditor />;
+      case "password":
+        return <PasswordEditor />;
       default:
         return <DashboardHome onNavigate={setActiveSection} />;
     }
