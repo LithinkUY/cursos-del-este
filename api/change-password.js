@@ -1,9 +1,7 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { neon } from "@neondatabase/serverless";
-import bcryptjs from "bcryptjs";
-const bcrypt = bcryptjs;
+import bcrypt from "bcryptjs";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -36,7 +34,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const user = rows[0];
 
-    // Verify current password (bcrypt or plain-text legacy)
     let valid = false;
     if (user.password_hash.startsWith("$2")) {
       valid = await bcrypt.compare(currentPassword, user.password_hash);
@@ -48,12 +45,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: "La contraseña actual es incorrecta." });
     }
 
-    // Hash and save new password
     const hash = await bcrypt.hash(newPassword, 10);
     await sql`UPDATE admin_users SET password_hash = ${hash}, updated_at = now() WHERE id = ${user.id}`;
 
     return res.status(200).json({ ok: true });
-  } catch (err: any) {
+  } catch (err) {
     console.error("API /change-password error:", err);
     return res.status(500).json({ error: err.message });
   }

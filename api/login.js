@@ -1,9 +1,7 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { neon } from "@neondatabase/serverless";
-import bcryptjs from "bcryptjs";
-const bcrypt = bcryptjs;
+import bcrypt from "bcryptjs";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -32,12 +30,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const user = rows[0];
 
-    // Support both bcrypt-hashed passwords and plain-text (legacy)
     let valid = false;
     if (user.password_hash.startsWith("$2")) {
       valid = await bcrypt.compare(password, user.password_hash);
     } else {
-      // Legacy plain-text password — also hash it for next time
       valid = password === user.password_hash;
       if (valid) {
         const hash = await bcrypt.hash(password, 10);
@@ -50,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({ ok: true, username: user.username });
-  } catch (err: any) {
+  } catch (err) {
     console.error("API /login error:", err);
     return res.status(500).json({ error: err.message });
   }
