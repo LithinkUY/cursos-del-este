@@ -105,9 +105,7 @@ export default function AdminLogin() {
             </Button>
           </form>
 
-          <p className="text-center text-xs text-slate-400 mt-6">
-            Credenciales por defecto: <strong>admin</strong> / <strong>admin123</strong>
-          </p>
+
         </div>
 
         <p
