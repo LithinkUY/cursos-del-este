@@ -1,5 +1,5 @@
-﻿// @refresh reset
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+// @refresh reset
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -405,30 +405,39 @@ const BACKEND = "";
 
 const SiteContext = createContext<SiteContextType | null>(null);
 
+function mergeWithDefaults(raw: Partial<SiteData>): SiteData {
+  return {
+    ...DEFAULT_DATA,
+    ...raw,
+    header: { ...DEFAULT_DATA.header, ...raw.header },
+    footer: { ...DEFAULT_DATA.footer, ...raw.footer },
+    colors: { ...DEFAULT_DATA.colors, ...raw.colors },
+    whatsapp: { ...DEFAULT_DATA.whatsapp, ...raw.whatsapp },
+    instagram: { ...DEFAULT_DATA.instagram, ...raw.instagram },
+    htmlWidgets: raw.htmlWidgets ?? [],
+    about: { ...DEFAULT_DATA.about, ...raw.about },
+    courseCategories: raw.courseCategories ?? DEFAULT_DATA.courseCategories,
+    coursesGridCols: raw.coursesGridCols ?? DEFAULT_DATA.coursesGridCols,
+    homeSections: (raw.homeSections ?? DEFAULT_DATA.homeSections).map((s: HomeSection) => ({
+      ...s,
+      fullWidth: s.fullWidth ?? true,
+      accordionItems: s.accordionItems ?? [],
+    })),
+    courses: raw.courses ?? DEFAULT_DATA.courses,
+    menuItems: raw.menuItems ?? DEFAULT_DATA.menuItems,
+    adminUser: raw.adminUser ?? DEFAULT_DATA.adminUser,
+  };
+}
+
 export function SiteProvider({ children }: { children: ReactNode }) {
+  // Track whether remote data has been loaded to avoid overwriting DB with stale data
+  const remoteLoadedRef = useRef(false);
+
   const [data, setData] = useState<SiteData>(() => {
     try {
       const saved = localStorage.getItem("cursosdeleste_data");
       if (saved) {
-        const parsed = JSON.parse(saved);
-        // Deep merge to pick up new default fields
-        return {
-          ...DEFAULT_DATA,
-          ...parsed,
-          header: { ...DEFAULT_DATA.header, ...parsed.header },
-          footer: { ...DEFAULT_DATA.footer, ...parsed.footer },
-          colors: { ...DEFAULT_DATA.colors, ...parsed.colors },
-          whatsapp: { ...DEFAULT_DATA.whatsapp, ...parsed.whatsapp },
-          instagram: { ...DEFAULT_DATA.instagram, ...parsed.instagram },
-          htmlWidgets: parsed.htmlWidgets ?? [],
-          about: { ...DEFAULT_DATA.about, ...parsed.about },
-          courseCategories: parsed.courseCategories ?? DEFAULT_DATA.courseCategories,
-          homeSections: (parsed.homeSections ?? DEFAULT_DATA.homeSections).map((s: HomeSection) => ({
-            ...s,
-            fullWidth: s.fullWidth ?? true,
-            accordionItems: s.accordionItems ?? [],
-          })),
-        };
+        return mergeWithDefaults(JSON.parse(saved));
       }
     } catch {}
     return DEFAULT_DATA;
@@ -446,33 +455,35 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     fetch(`${BACKEND}/api/data`)
       .then((r) => r.ok ? r.json() : null)
       .then((remote) => {
-        if (!remote) return;
-        const merged: SiteData = {
-          ...DEFAULT_DATA,
-          ...remote,
-          header: { ...DEFAULT_DATA.header, ...remote.header },
-          footer: { ...DEFAULT_DATA.footer, ...remote.footer },
-          colors: { ...DEFAULT_DATA.colors, ...remote.colors },
-          whatsapp: { ...DEFAULT_DATA.whatsapp, ...remote.whatsapp },
-          instagram: { ...DEFAULT_DATA.instagram, ...remote.instagram },
-          htmlWidgets: remote.htmlWidgets ?? [],
-          about: { ...DEFAULT_DATA.about, ...remote.about },
-          courseCategories: remote.courseCategories ?? DEFAULT_DATA.courseCategories,
-          homeSections: (remote.homeSections ?? DEFAULT_DATA.homeSections).map((s: HomeSection) => ({
-            ...s,
-            fullWidth: s.fullWidth ?? true,
-            accordionItems: s.accordionItems ?? [],
-          })),
-        };
+        if (!remote || Object.keys(remote).length === 0) {
+          // No remote data yet — allow writes with current defaults
+          remoteLoadedRef.current = true;
+          return;
+        }
+        const merged = mergeWithDefaults(remote);
         setData(merged);
         localStorage.setItem("cursosdeleste_data", JSON.stringify(merged));
+        // Mark as loaded AFTER setting data to avoid the useEffect
+        // below from POSTing old data before the remote data arrives
+        remoteLoadedRef.current = true;
       })
-      .catch(() => { /* backend offline — usar localStorage */ });
+      .catch(() => {
+        // Backend offline — use localStorage, allow writes
+        remoteLoadedRef.current = true;
+      });
   }, []);
 
   // ── Persistir en localStorage y backend cuando cambian los datos ─────────
+  // Only POST to backend if: 1) remote data has been loaded, 2) admin is logged in
+  // This prevents visitors from overwriting admin changes with stale localStorage data
   useEffect(() => {
     localStorage.setItem("cursosdeleste_data", JSON.stringify(data));
+
+    // Don't POST until remote data has been loaded (prevents race condition)
+    if (!remoteLoadedRef.current) return;
+    // Only admin should write back to the database
+    if (!sessionStorage.getItem("admin_logged")) return;
+
     fetch(`${BACKEND}/api/data`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
